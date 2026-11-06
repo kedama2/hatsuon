@@ -102,8 +102,8 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 .round.listening::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:3px solid var(--accent);animation:pulse 1.2s ease-out infinite}
 .card.anim{transition:transform .25s ease,opacity .25s ease}
 .stamp{position:absolute;top:50%;font-size:1.4rem;font-weight:900;padding:6px 14px;border:3px solid;border-radius:12px;opacity:0;pointer-events:none;background:var(--surface)}
-.stamp.ok{right:16px;color:var(--ok);border-color:var(--ok);transform:translateY(-50%) rotate(12deg)}
-.stamp.ng{left:16px;color:var(--accent);border-color:var(--accent);transform:translateY(-50%) rotate(-12deg)}
+.stamp.ok{left:16px;color:var(--ok);border-color:var(--ok);transform:translateY(-50%) rotate(-12deg)}
+.stamp.ng{right:16px;color:var(--accent);border-color:var(--accent);transform:translateY(-50%) rotate(12deg)}
 .judge{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .judge button{padding:16px 8px;border-radius:18px;font-size:1rem;font-weight:900}
 .btn-ng{background:var(--accent-soft);color:var(--accent)}
@@ -919,7 +919,7 @@ function judge(alts){
   if (best >= 0.75){
     setResult("ok", "◎ ばっちり！ 「次へ」に進もう");
   } else {
-    setResult("ng", `「${esc(bestText)}」と聞こえました<br>もう一回か、右へスライドで苦手へ`);
+    setResult("ng", `「${esc(bestText)}」と聞こえました<br>もう一回か、左へスライドで苦手へ`);
   }
 }
 
@@ -964,20 +964,20 @@ card.addEventListener("pointermove", e => {
   dx = e.clientX - sx;
   card.style.transform = `translateX(${dx}px) rotate(${dx / 18}deg)`;
   const p = Math.min(1, Math.abs(dx) / 100);
-  $("stampOk").style.opacity = dx < 0 ? p : 0;
-  $("stampNg").style.opacity = dx > 0 ? p : 0;
+  $("stampOk").style.opacity = dx > 0 ? p : 0;
+  $("stampNg").style.opacity = dx < 0 ? p : 0;
   const tint = $("tint");
-  tint.style.background = dx < 0 ? "var(--ok-soft)" : "var(--accent-soft)";
+  tint.style.background = dx > 0 ? "var(--ok-soft)" : "var(--accent-soft)";
   tint.style.opacity = p * 0.9;
-  $("ehOk").style.opacity = dx < 0 ? 1 : 1 - p * 0.7;
-  $("ehNg").style.opacity = dx > 0 ? 1 : 1 - p * 0.7;
-  $("ehOk").style.transform = dx < 0 ? `scale(${1 + p * 0.12})` : "";
-  $("ehNg").style.transform = dx > 0 ? `scale(${1 + p * 0.12})` : "";
+  $("ehOk").style.opacity = dx > 0 ? 1 : 1 - p * 0.7;
+  $("ehNg").style.opacity = dx < 0 ? 1 : 1 - p * 0.7;
+  $("ehOk").style.transform = dx > 0 ? `scale(${1 + p * 0.12})` : "";
+  $("ehNg").style.transform = dx < 0 ? `scale(${1 + p * 0.12})` : "";
 });
 const endDrag = () => {
   if (!dragging) return;
   dragging = false;
-  if (Math.abs(dx) > 90) flyOut(dx < 0);
+  if (Math.abs(dx) > 90) flyOut(dx > 0);
   else { card.classList.add("anim"); card.style.transform = ""; hideStamps(); }
 };
 card.addEventListener("pointerup", endDrag);
@@ -990,7 +990,7 @@ function flyOut(ok){
   $("tint").style.background = ok ? "var(--ok-soft)" : "var(--accent-soft)";
   $("tint").style.opacity = 0.9;
   const w = window.innerWidth;
-  card.style.transform = `translateX(${ok ? -w : w}px) rotate(${ok ? -20 : 20}deg)`;
+  card.style.transform = `translateX(${ok ? w : -w}px) rotate(${ok ? 20 : -20}deg)`;
   card.style.opacity = "0";
   setTimeout(() => {
     advance(ok);
@@ -1008,8 +1008,8 @@ $("okBtn").onclick = () => flyOut(true);
 $("ngBtn").onclick = () => flyOut(false);
 document.addEventListener("keydown", e => {
   if ($("sheet").classList.contains("open") || !$("finish").hidden) return;
-  if (e.key === "ArrowLeft") flyOut(true);
-  if (e.key === "ArrowRight") flyOut(false);
+  if (e.key === "ArrowRight") flyOut(true);
+  if (e.key === "ArrowLeft") flyOut(false);
 });
 $("star").onclick = () => {
   const id = S.cur;
