@@ -152,6 +152,47 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 .toast.show{transform:translate(-50%,0);opacity:1}
 .toast.bad{background:var(--accent)}
 
+.finish{position:fixed;inset:0;z-index:40;overflow:auto;background:var(--bg);
+  padding:calc(24px + env(safe-area-inset-top,0px)) 18px calc(28px + env(safe-area-inset-bottom,0px))}
+.finish[hidden]{display:none}
+.finish.party{background:linear-gradient(165deg,#3B5BDB 0%,#C2255C 55%,#F08C00 100%);color:#fff}
+.f-inner{max-width:480px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.f-emoji{font-size:4.5rem;line-height:1}
+.f-title{font-size:1.7rem;font-weight:900;margin:0}
+.f-sub{margin:0;font-weight:700;opacity:.9}
+.f-score{display:flex;align-items:baseline;gap:4px;font-weight:900}
+.f-score .big{font-size:4.2rem;line-height:1}
+.f-score .of{font-size:1.1rem}
+.f-rate{font-size:1rem;font-weight:700}
+.f-rate b{font-size:1.4rem}
+.f-box{width:100%;background:var(--surface);color:var(--ink);border-radius:20px;padding:16px;text-align:left}
+.f-box h3{margin:0 0 12px;font-size:.95rem;font-weight:900}
+.f-box h3 small{color:var(--muted);font-weight:700;margin-left:6px}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:130px}
+.wcol{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px;font-size:.75rem;color:var(--muted);font-weight:700}
+.wbar{width:70%;min-height:4px;border-radius:8px 8px 3px 3px;background:var(--brand-soft)}
+.wcol.today .wbar{background:var(--accent)}
+.wcol.today{color:var(--accent)}
+.wnum{color:var(--ink)}
+.ov{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+.ov b{font-size:1.8rem;color:var(--ok)}
+.ov span{font-size:.85rem;color:var(--muted)}
+.f-box .bar span{transition:width 1.2s ease}
+.f-btns{display:flex;flex-direction:column;gap:10px;width:100%;margin-top:6px}
+.f-more{padding:16px;border-radius:18px;background:#fff;color:#C2255C;font-weight:900;font-size:1.05rem}
+.finish:not(.party) .f-more{background:var(--ink);color:var(--bg)}
+.f-close{padding:12px;border-radius:14px;font-weight:700;color:inherit;opacity:.9}
+.finish.party .f-emoji{animation:boing 1s cubic-bezier(.3,1.6,.5,1) both, wiggle 1.2s ease-in-out 1s infinite}
+.finish.party .f-title{animation:pop .6s cubic-bezier(.3,1.6,.5,1) .25s both}
+.finish.party .f-score{animation:pop .6s cubic-bezier(.3,1.6,.5,1) .45s both}
+.finish.party .f-box{animation:rise .5s ease .7s both}
+.finish.party .f-box + .f-box{animation-delay:.85s}
+@keyframes boing{from{transform:scale(0) rotate(-30deg)}to{transform:scale(1) rotate(0)}}
+@keyframes wiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-12deg) scale(1.08)}75%{transform:rotate(12deg) scale(1.08)}}
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes rise{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:45}
+
 @media (prefers-reduced-motion: reduce){
   *{transition:none!important;animation:none!important}
 }
@@ -163,6 +204,7 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
     <div class="title">まいにち発音</div>
     <div class="top-right">
       <span class="streak" id="streak"></span>
+      <button class="icon-btn" id="openStats" aria-label="きろくを見る">📊</button>
       <button class="icon-btn" id="openSettings" aria-label="設定">⚙️</button>
     </div>
   </header>
@@ -217,6 +259,9 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
   <h3>お手本の速さ</h3>
   <div class="chips" id="rateChips"></div>
 
+  <h3>達成したときの音楽</h3>
+  <div class="chips" id="soundChips"></div>
+
   <h3>練習したい音だけにしぼる</h3>
   <div class="chips" id="focusChips"></div>
   <p class="hint">何も選ばないと、全部の音からランダムに出ます。</p>
@@ -230,11 +275,86 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
   <button class="close" id="closeSettings">閉じる</button>
 </div>
 
+<div class="finish" id="finish" role="dialog" aria-modal="true" aria-labelledby="fTitle" hidden>
+  <div class="f-inner">
+    <div class="f-emoji" id="fEmoji">🎉</div>
+    <h2 class="f-title" id="fTitle">今日のノルマ達成！</h2>
+    <p class="f-sub" id="fSub"></p>
+    <div class="f-score"><span class="big" id="fOk">0</span><span class="of"> / <span id="fDone">0</span> 問 言えた</span></div>
+    <div class="f-rate">正解率 <b id="fRate">0%</b></div>
+    <section class="f-box">
+      <h3>この1週間の「言えた」数 <small id="fWeekSum"></small></h3>
+      <div class="week" id="week"></div>
+    </section>
+    <section class="f-box">
+      <h3>苦手克服率</h3>
+      <div class="ov"><b id="fOv">0%</b><span id="fOvSub"></span></div>
+      <div class="bar"><span id="fOvBar"></span></div>
+    </section>
+    <div class="f-btns">
+      <button class="f-more" id="fMore">もっと練習する</button>
+      <button class="f-close" id="fClose">今日はおわり</button>
+    </div>
+  </div>
+</div>
+<canvas id="confetti" aria-hidden="true"></canvas>
+
 <div class="toast" id="toast"></div>
 
 <script>
 // ===== 単語データ（表記|よみ）日常でよく使う順を意識 =====
 const RAW = `
+*いらっしゃいませ|いらっしゃいませ
+*少々お待ちくださいませ|しょうしょうおまちくださいませ
+*お待たせいたしました|おまたせいたしました
+*ありがとうございました|ありがとうございました
+*またお越しくださいませ|またおこしくださいませ
+*ご来店ありがとうございます|ごらいてんありがとうございます
+*何名様ですか|なんめいさまですか
+*お席にご案内します|おせきにごあんないします
+*こちらへどうぞ|こちらへどうぞ
+*ご注文はお決まりですか|ごちゅうもんはおきまりですか
+*ご注文を繰り返します|ごちゅうもんをくりかえします
+*お決まりの頃お伺いします|おきまりのころおうかがいします
+*お飲み物はいかがですか|おのみものはいかがですか
+*ただいまお持ちします|ただいまおもちします
+*お熱いのでお気をつけください|おあついのでおきをつけください
+*ごゆっくりどうぞ|ごゆっくりどうぞ
+*お会計はご一緒でよろしいですか|おかいけいはごいっしょでよろしいですか
+*お会計はこちらです|おかいけいはこちらです
+*お支払い方法はいかがなさいますか|おしはらいほうほうはいかがなさいますか
+*ポイントカードはお持ちですか|ぽいんとかーどはおもちですか
+*袋はご利用ですか|ふくろはごりようですか
+*レシートはご利用ですか|れしーとはごりようですか
+*カードをお預かりします|かーどをおあずかりします
+*一万円お預かりします|いちまんえんおあずかりします
+*お釣りのお返しです|おつりのおかえしです
+*レシートのお返しです|れしーとのおかえしです
+*温めますか|あたためますか
+*お箸はおつけしますか|おはしはおつけしますか
+*スプーンはおつけしますか|すぷーんはおつけしますか
+*申し訳ございません|もうしわけございません
+*大変失礼いたしました|たいへんしつれいいたしました
+*恐れ入りますが|おそれいりますが
+*確認いたします|かくにんいたします
+*在庫を確認してまいります|ざいこをかくにんしてまいります
+*試着室はこちらです|しちゃくしつはこちらです
+*サイズはいかがですか|さいずはいかがですか
+*ラッピングはいかがなさいますか|らっぴんぐはいかがなさいますか
+*ご自宅用でよろしいですか|ごじたくようでよろしいですか
+*お取り置きもできます|おとりおきもできます
+*ただいま満席です|ただいままんせきです
+*順番にご案内しております|じゅんばんにごあんないしております
+*お足元にお気をつけください|おあしもとにおきをつけください
+*お荷物お預かりしましょうか|おにもつおあずかりしましょうか
+*お気をつけてお帰りください|おきをつけておかえりください
+*またのご利用をお待ちしております|またのごりようをおまちしております
+*お電話ありがとうございます|おでんわありがとうございます
+*担当の者に代わります|たんとうのものにかわります
+*お名前をお伺いしてもよろしいですか|おなまえをおうかがいしてもよろしいですか
+*折り返しご連絡いたします|おりかえしごれんらくいたします
+*ご予約のお名前をお願いします|ごよやくのおなまえをおねがいします
+*よろしければこちらもどうぞ|よろしければこちらもどうぞ
 ありがとうございます|ありがとうございます
 ちょっと待ってください|ちょっとまってください
 お疲れさまです|おつかれさまです
@@ -627,11 +747,14 @@ function moras(k){
   return out;
 }
 
+const PRIO_TITLES = new Set(["ありがとうございます","かしこまりました","承知しました","失礼します","すみません","少々お待ちください","よろしくお願いします","お疲れさまです","確認します","お先に失礼します"]);
 const WORDS = RAW.trim().split("\n").map((line, i) => {
-  const [t, k] = line.split("|").map(x => x.trim());
+  let [t, k] = line.split("|").map(x => x.trim());
+  const star = t.startsWith("*");
+  if (star) t = t.slice(1);
   const m = moras(k);
   const hard = [...new Set(m.filter(x => HARD_SET.has(x)))];
-  return { id: i, t, k, m, hard };
+  return { id: i, t, k, m, hard, prio: star || PRIO_TITLES.has(t) };
 }).filter(w => w.hard.length > 0);
 const BY_ID = new Map(WORDS.map(w => [w.id, w]));
 
@@ -643,7 +766,8 @@ const TODAY = ymd(new Date());
 const YESTERDAY = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return ymd(d); })();
 
 const DEFAULT = { date: null, order: null, idx: 0, cycle: 0, cur: null, curIsWeak: false, done: 0, goal: 30, rate: 0.85,
-  focus: [], weak: {}, streak: 0, streakLast: null, total: 0, mode: "daily", celebrated: false, count: 0 };
+  focus: [], weak: {}, streak: 0, streakLast: null, total: 0, mode: "daily", celebrated: false, count: 0,
+  log: {}, everWeak: {}, overcome: {}, sound: true };
 const fresh = () => JSON.parse(JSON.stringify(DEFAULT));
 let S;
 try { S = Object.assign(fresh(), JSON.parse(localStorage.getItem(KEY) || "{}")); } catch { S = fresh(); }
@@ -653,6 +777,12 @@ if (S.date !== TODAY){
   S.date = TODAY; S.done = 0; S.order = null; S.idx = 0; S.cycle = 0; S.cur = null; S.celebrated = false;
   if (S.streakLast !== TODAY && S.streakLast !== YESTERDAY) S.streak = 0;
 }
+for (const id of Object.keys(S.weak)) S.everWeak[id] = 1;
+{ const keep = new Set(Array.from({ length: 31 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - i); return ymd(d); }));
+  for (const k of Object.keys(S.log)) if (!keep.has(k)) delete S.log[k]; }
+const todayLog = () => (S.log[TODAY] ||= { done: 0, ok: 0 });
+function markWeak(id){ S.weak[id] = (S.weak[id] || 0) + 1; S.everWeak[id] = 1; delete S.overcome[id]; }
+function unmarkWeak(id){ delete S.weak[id]; S.overcome[id] = 1; }
 
 // ===== 日替わりランダム =====
 function hash(str){ let h = 2166136261; for (const c of str){ h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
@@ -664,8 +794,11 @@ function pool(){
 }
 function buildOrder(){
   const r = rng(hash(TODAY + "|" + S.focus.join(",") + "|" + S.cycle));
-  const ids = pool().map(w => w.id);
-  for (let i = ids.length - 1; i > 0; i--){ const j = Math.floor(r() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
+  const shuf = a => { for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const p = pool();
+  const pr = shuf(p.filter(w => w.prio).map(w => w.id)), ot = shuf(p.filter(w => !w.prio).map(w => w.id));
+  const ids = [];
+  while (pr.length || ot.length){ if (pr.length) ids.push(pr.shift()); if (ot.length) ids.push(ot.shift()); }
   S.order = ids; S.idx = 0;
 }
 const weakIds = () => Object.keys(S.weak).map(Number).filter(id => BY_ID.has(id));
@@ -730,7 +863,7 @@ function speak(){
 
 // ===== 音声判定 =====
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-const VARIANTS = [["様","さま"],["下さい","ください"],["御願い","お願い"],["おねがい","お願い"],["有難う","ありがとう"],["有り難う","ありがとう"],["御座います","ございます"],["丁度","ちょうど"],["一寸","ちょっと"],["待って","まって"],["大丈夫","だいじょうぶ"],["1度","いちど"],["一度","いちど"],["子供","こども"],["子ども","こども"]];
+const VARIANTS = [["様","さま"],["下さい","ください"],["御願い","お願い"],["おねがい","お願い"],["有難う","ありがとう"],["有り難う","ありがとう"],["御座います","ございます"],["丁度","ちょうど"],["一寸","ちょっと"],["待って","まって"],["大丈夫","だいじょうぶ"],["1度","いちど"],["一度","いちど"],["子供","こども"],["子ども","こども"],["1万円","一万円"],["1万","一万"],["お越し","おこし"],["お伺い","おうかがい"]];
 const norm = s => { let x = toHira(s); for (const [a, b] of VARIANTS) x = x.split(a).join(b); return x.replace(/[\s、。，．,.!?！？「」『』ー〜~・]/g, ""); };
 function lev(a, b){
   const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
@@ -798,19 +931,22 @@ function advance(ok){
   const id = S.cur;
   let msg = "", bad = false;
   if (ok){
-    if (S.mode === "weak" && S.weak[id]){
+    if (S.weak[id]){
       S.weak[id]--;
-      if (S.weak[id] <= 0){ delete S.weak[id]; msg = "苦手を克服！リストから外しました"; }
+      if (S.weak[id] <= 0){ unmarkWeak(id); msg = "苦手を克服！リストから外しました"; }
     }
   } else {
-    S.weak[id] = (S.weak[id] || 0) + 1;
+    markWeak(id);
     msg = "苦手リストに入れました"; bad = true;
   }
   S.done++; S.total++;
+  const lg = todayLog(); lg.done++; if (ok) lg.ok++;
+  let finished = false;
   if (S.streakLast !== TODAY){ S.streak = (S.streakLast === YESTERDAY ? S.streak : 0) + 1; S.streakLast = TODAY; }
-  if (!S.celebrated && S.done >= S.goal){ S.celebrated = true; msg = "🎉 今日の目標達成！"; bad = false; }
-  if (msg) toast(msg, bad);
+  if (!S.celebrated && S.done >= S.goal){ S.celebrated = true; finished = true; }
+  if (msg && !finished) toast(msg, bad);
   pickNext(); resetResult(); render();
+  if (finished) showResult(true);
 }
 
 // ===== スワイプ =====
@@ -871,14 +1007,14 @@ function flyOut(ok){
 $("okBtn").onclick = () => flyOut(true);
 $("ngBtn").onclick = () => flyOut(false);
 document.addEventListener("keydown", e => {
-  if ($("sheet").classList.contains("open")) return;
+  if ($("sheet").classList.contains("open") || !$("finish").hidden) return;
   if (e.key === "ArrowLeft") flyOut(true);
   if (e.key === "ArrowRight") flyOut(false);
 });
 $("star").onclick = () => {
   const id = S.cur;
-  if (S.weak[id]) { delete S.weak[id]; toast("苦手リストから外しました"); }
-  else { S.weak[id] = 1; toast("苦手リストに入れました", true); }
+  if (S.weak[id]) { unmarkWeak(id); toast("苦手リストから外しました"); }
+  else { markWeak(id); toast("苦手リストに入れました", true); }
   render();
 };
 $("modeDaily").onclick = () => { if (S.mode !== "daily"){ S.mode = "daily"; pickNext(); resetResult(); render(); } };
@@ -897,6 +1033,8 @@ function renderSettings(){
   [10, 20, 30, 50, 100].forEach(n => g.append(chip(n + "語", S.goal === n, () => { S.goal = n; save(); renderSettings(); renderStats(); })));
   const r = $("rateChips"); r.innerHTML = "";
   [["ゆっくり", 0.65], ["ふつう", 0.85], ["はやめ", 1.0]].forEach(([l, v]) => r.append(chip(l, S.rate === v, () => { S.rate = v; save(); renderSettings(); })));
+  const sd = $("soundChips"); sd.innerHTML = "";
+  [["オン", true], ["オフ", false]].forEach(([l, v]) => sd.append(chip(l, S.sound === v, () => { S.sound = v; save(); renderSettings(); })));
   const f = $("focusChips"); f.innerHTML = "";
   HARD.forEach(h => f.append(chip(h, S.focus.includes(h), () => {
     S.focus = S.focus.includes(h) ? S.focus.filter(x => x !== h) : [...S.focus, h];
@@ -910,7 +1048,7 @@ function renderSettings(){
     const row = document.createElement("div"); row.className = "weak-item";
     row.innerHTML = `<span>${w.t} <small>${w.k}</small></span>`;
     const del = document.createElement("button"); del.textContent = "外す";
-    del.onclick = () => { delete S.weak[id]; save(); renderSettings(); renderStats(); render(); };
+    del.onclick = () => { unmarkWeak(id); save(); renderSettings(); renderStats(); render(); };
     row.append(del); wl.append(row);
   });
 }
@@ -943,6 +1081,118 @@ function disarmReset(){
   const btn = $("reset");
   btn.textContent = "記録をすべて消す"; btn.style.background = ""; btn.style.color = ""; btn.style.padding = ""; btn.style.borderRadius = "";
 }
+
+// ===== 結果画面 =====
+let actx = null;
+function unlockAudio(){
+  try {
+    if (!actx){ const AC = window.AudioContext || window.webkitAudioContext; if (AC) actx = new AC(); }
+    if (actx && actx.state === "suspended") actx.resume();
+  } catch {}
+}
+document.addEventListener("pointerdown", unlockAudio, { passive: true });
+document.addEventListener("keydown", unlockAudio);
+function tone(f, t, d, type, vol){
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = type; o.frequency.value = f;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(g); g.connect(actx.destination);
+  o.start(t); o.stop(t + d + 0.05);
+}
+function fanfare(){
+  if (!S.sound) return;
+  unlockAudio(); if (!actx) return;
+  const t = actx.currentTime + 0.08;
+  const C5 = 523.25, E5 = 659.25, G5 = 783.99, C6 = 1046.5, A5 = 880, B5 = 987.77;
+  [[G5,0,.12],[G5,.13,.12],[G5,.26,.12],[C6,.42,.45],[A5,.9,.14],[B5,1.04,.14],[C6,1.2,1.1]]
+    .forEach(([f, s, d]) => { tone(f, t + s, d, "square", 0.07); tone(f, t + s, d, "triangle", 0.14); });
+  [C5, E5, G5, C6].forEach(f => tone(f, t + 1.2, 1.3, "triangle", 0.07));
+  [C5/4, C5/2].forEach(f => tone(f, t + 1.2, 1.2, "sine", 0.18));
+  for (let i = 0; i < 18; i++) tone(1400 + Math.random() * 1800, t + 1.3 + i * 0.06, 0.12, "sine", 0.045);
+}
+function confetti(){
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const c = $("confetti"), ctx = c.getContext("2d"), dpr = window.devicePixelRatio || 1;
+  const W = c.width = innerWidth * dpr, H = c.height = innerHeight * dpr;
+  const colors = ["#FFD43B","#FF6B9A","#4CC9A0","#74C0FC","#FFFFFF","#B197FC","#FFA94D"];
+  const emo = ["🎉","✨","⭐","💮","🎊"];
+  const ps = [];
+  const burst = (x, n) => { for (let i = 0; i < n; i++){
+    const a = -Math.PI / 2 + (Math.random() - 0.5) * 1.3, v = (10 + Math.random() * 11) * dpr;
+    ps.push({ x, y: H + 10, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: (4 + Math.random() * 5) * dpr,
+      c: colors[i % colors.length], rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.35,
+      kind: Math.random() < 0.08 ? emo[i % emo.length] : (Math.random() < 0.6 ? "rect" : "dot") });
+  } };
+  burst(W * 0.1, 80); burst(W * 0.9, 80);
+  setTimeout(() => burst(W * 0.5, 130), 450);
+  setTimeout(() => { burst(W * 0.25, 70); burst(W * 0.75, 70); }, 1200);
+  setTimeout(() => burst(W * 0.5, 90), 2000);
+  const start = performance.now();
+  (function loop(now){
+    ctx.clearRect(0, 0, W, H);
+    for (const p of ps){
+      p.vy += 0.32 * dpr; p.vx *= 0.985; p.vy *= 0.985; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      if (p.kind === "rect"){ ctx.fillStyle = p.c; ctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); }
+      else if (p.kind === "dot"){ ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(0, 0, p.r / 1.3, 0, 7); ctx.fill(); }
+      else { ctx.font = `${22 * dpr}px sans-serif`; ctx.fillText(p.kind, -11 * dpr, 8 * dpr); }
+      ctx.restore();
+    }
+    if (now - start < 5500 && !$("finish").hidden) requestAnimationFrame(loop);
+    else ctx.clearRect(0, 0, W, H);
+  })(start);
+}
+function countUp(el, to, ms){
+  const t0 = performance.now();
+  (function step(now){
+    const k = Math.min(1, (now - t0) / ms);
+    el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3)));
+    if (k < 1) requestAnimationFrame(step);
+  })(t0);
+}
+function showResult(party){
+  const f = $("finish");
+  f.classList.toggle("party", party);
+  f.hidden = false; f.scrollTop = 0;
+  const lg = S.log[TODAY] || { done: 0, ok: 0 };
+  $("fEmoji").textContent = party ? "🎉" : "📊";
+  $("fTitle").textContent = party ? "今日のノルマ達成！" : "きろく";
+  $("fSub").textContent = party
+    ? (S.streak > 1 ? `🔥 ${S.streak}日連続！ 天才すぎる！` : "最高！ よくがんばりました！")
+    : (S.streak ? `🔥 ${S.streak}日連続中` : "今日の練習を始めよう");
+  $("fDone").textContent = lg.done;
+  $("fRate").textContent = (lg.done ? Math.round(lg.ok / lg.done * 100) : 0) + "%";
+  // 1週間
+  const days = [];
+  for (let i = 6; i >= 0; i--){ const d = new Date(); d.setDate(d.getDate() - i); days.push(d); }
+  const vals = days.map(d => (S.log[ymd(d)] || {}).ok || 0);
+  const max = Math.max(1, ...vals);
+  $("week").innerHTML = days.map((d, i) =>
+    `<div class="wcol${i === 6 ? " today" : ""}"><span class="wnum">${vals[i]}</span><div class="wbar" style="height:${Math.max(4, vals[i] / max * 90)}px"></div><span>${i === 6 ? "今日" : "日月火水木金土"[d.getDay()]}</span></div>`).join("");
+  $("fWeekSum").textContent = `合計 ${vals.reduce((a, b) => a + b, 0)} 語`;
+  // 苦手克服率
+  const ever = Object.keys(S.everWeak).length;
+  const ov = Object.keys(S.overcome).filter(id => !S.weak[id] && S.everWeak[id]).length;
+  const rate = ever ? Math.round(ov / ever * 100) : 0;
+  $("fOv").textContent = ever ? rate + "%" : "ー";
+  $("fOvSub").textContent = ever ? `克服 ${ov}語 ／ これまでの苦手 ${ever}語` : "苦手に入れた言葉はまだありません";
+  $("fOvBar").style.width = "0%";
+  requestAnimationFrame(() => requestAnimationFrame(() => { $("fOvBar").style.width = rate + "%"; }));
+  $("fMore").textContent = party ? "もっと練習する" : "閉じる";
+  $("fClose").hidden = !party;
+  if (party){
+    countUp($("fOk"), lg.ok, 1400);
+    confetti(); fanfare();
+    if (navigator.vibrate) navigator.vibrate([90, 60, 90, 60, 260]);
+  } else $("fOk").textContent = lg.ok;
+  save();
+}
+function closeResult(){ $("finish").hidden = true; render(); }
+$("fMore").onclick = closeResult;
+$("fClose").onclick = closeResult;
+$("openStats").onclick = () => showResult(false);
 
 if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = () => {};
 resetResult();
